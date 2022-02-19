@@ -1,3 +1,8 @@
+"""
+GitLab API:
+https://docs.gitlab.com/ee/api/projects.html
+https://docs.gitlab.com/ee/api/lint.html#validate-a-projects-ci-configuration
+"""
 from typing import Any, Callable, cast, Dict, List, Optional, TYPE_CHECKING, Union
 
 import requests
@@ -9,6 +14,7 @@ from gitlab.base import RequiredOptional, RESTManager, RESTObject
 from gitlab.mixins import (
     CreateMixin,
     CRUDMixin,
+    GetWithoutIdMixin,
     ListMixin,
     ObjectDeleteMixin,
     RefreshMixin,
@@ -80,6 +86,8 @@ __all__ = [
     "ProjectForkManager",
     "ProjectRemoteMirror",
     "ProjectRemoteMirrorManager",
+    "ProjectCiLint",
+    "ProjectCiLintManager",
 ]
 
 
@@ -141,6 +149,7 @@ class Project(RefreshMixin, SaveMixin, ObjectDeleteMixin, RepositoryMixin, RESTO
     badges: ProjectBadgeManager
     boards: ProjectBoardManager
     branches: ProjectBranchManager
+    ci_lint: "ProjectCiLintManager"
     clusters: ProjectClusterManager
     commits: ProjectCommitManager
     customattributes: ProjectCustomAttributeManager
@@ -1013,3 +1022,27 @@ class ProjectRemoteMirrorManager(ListMixin, CreateMixin, UpdateMixin, RESTManage
         required=("url",), optional=("enabled", "only_protected_branches")
     )
     _update_attrs = RequiredOptional(optional=("enabled", "only_protected_branches"))
+
+
+class ProjectCiLint(RESTObject):
+    pass
+
+
+class ProjectCiLintManager(GetWithoutIdMixin, RESTManager):
+    _path = "/projects/{project_id}/ci/lint"
+    _obj_cls = ProjectCiLint
+    _from_parent_attrs = {"project_id": "id"}
+    # https://docs.gitlab.com/ee/api/lint.html#validate-a-projects-ci-configuration
+
+    def get(
+        self, id: Optional[Union[int, str]] = None, **kwargs: Any
+    ) -> Optional[ProjectCiLint]:
+        if id is not None:
+            raise AttributeError("Unsupported attribute: id")
+
+        if TYPE_CHECKING:
+            assert self.path is not None
+        server_data = self.gitlab.http_get(self.path, **kwargs)
+        if TYPE_CHECKING:
+            assert isinstance(server_data, dict)
+        return self._obj_cls(self, server_data)
